@@ -28,10 +28,13 @@ app.use(passport.initialize());
 //passport config
 require('./config/passport.js')(passport);
 
+
 //use routes
 app.use('/api/users',users);
 app.use('/api/profile',profile);
 app.use('/api/posts',posts);
+
+
 
 const port = process.env.PORT || 5000;
 

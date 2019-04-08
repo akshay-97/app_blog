@@ -1,10 +1,17 @@
 const express= require('express');
 const router =express.Router();
+
 const gravatar = require('gravatar');
 const bcrypt =require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const keys =require('../../config/keys');
 const passport =require('passport');
+
+//load input validation
+const validateRegInput =require('../../validation/register');
+//load login validation
+const validateLoginInput = require('../../validation/login');
+
 //load user model
 
 const User = require('../../models/User');
@@ -20,9 +27,18 @@ router.get('/test', (req,res) => res.json({msg: "user routes"}));
 // @access  Public
 
 router.post('/register', (req,res) =>{
+
+    const {error, isValid} = validateRegInput(req.body);
+    //check validation
+
+    if(!isValid){
+        return res.status(400).json(error);
+    }
+
     User.findOne({email: req.body.email }).then( user =>{
         if(user) {
-            return res.status(400).json({email: 'email already exists'});
+            error.email= 'Email already exists';
+            return res.status(400).json(error);
         } else{
             const avatar = gravatar.url(req.body.email, { 
                 s: 200,  //size
@@ -57,13 +73,21 @@ router.post('/register', (req,res) =>{
 // @access  Public 
 
 router.post('/login',(req,res)=>{
+    //validation
+    const {error, isValid} = validateLoginInput(req.body);
+    if(!isValid){
+        res.status(400).json(error);
+    }
+
     const email= req.body.email;
     const password=req.body.password;
 
+    
     //find user by email
     User.findOne({email}).then( user => {
         if(!user){  
-            return res.status(400).json({email:'user not found'});
+            error,email =' user not found';
+            return res.status(400).json(user);
         }
 
         //check password, compare returns bool value
@@ -80,12 +104,13 @@ router.post('/login',(req,res)=>{
                     (err, token) => {
                         res.json({
                             success:true,
-                            token: 'Bearer' + token
+                            token: 'Bearer ' + token
                         });       
                 });
             }
             else{
-                return res.status(400).json({password: "password incorrect"});
+                error.password = ' password incorrect';
+                return res.status(400).json(error);
             }
         });
     });
@@ -96,7 +121,10 @@ router.post('/login',(req,res)=>{
 // @access  Private
 
 router.get('/current',passport.authenticate('jwt' ,{ session :false}), (req,res) =>{
-    res.json();
+    res.json({
+        id: req.user.id,
+        name: req.user.name,
+        email: req.user.email
+    });
 });
-
 module.exports= router;
